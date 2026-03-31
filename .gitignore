@@ -1,0 +1,21 @@
+# Build artifacts
+/target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Build recipes (external)
+*.bb
+
+# Claude Code context
+CLAUDE.md
+setup-ai.sh
+.github/copilot-instructions.md
+GEMINI.md
+.user-context.md

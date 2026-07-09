@@ -2,6 +2,7 @@
 
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use actix_web::{App, HttpServer, dev::Server, web};
 use tracing::info;
@@ -12,7 +13,7 @@ use crate::{
         connector::ConnectionService, net_management::NetworkManagementService,
         scanner::ScanService,
     },
-    transport::unix_socket::handlers::{self, InterfaceName},
+    transport::unix_socket::handlers::{self, BleEnabled, InterfaceName},
 };
 
 /// Create the REST API server bound to a Unix domain socket.
@@ -25,6 +26,7 @@ use crate::{
 pub fn create<B: WifiBackend>(
     socket_path: &str,
     interface_name: &str,
+    ble_live: Arc<AtomicBool>,
     scan_service: Arc<ScanService<B>>,
     connect_service: Arc<ConnectionService<B>>,
     net_mgmt_service: Arc<NetworkManagementService<B>>,
@@ -33,6 +35,7 @@ pub fn create<B: WifiBackend>(
     let conn_data = web::Data::new(connect_service);
     let net_data = web::Data::new(net_mgmt_service);
     let iface_data = web::Data::new(InterfaceName(interface_name.to_string()));
+    let ble_data = web::Data::new(BleEnabled(ble_live));
 
     let server = HttpServer::new(move || {
         App::new()
@@ -40,6 +43,7 @@ pub fn create<B: WifiBackend>(
             .app_data(conn_data.clone())
             .app_data(net_data.clone())
             .app_data(iface_data.clone())
+            .app_data(ble_data.clone())
             .configure(handlers::configure_routes::<B>)
     });
 

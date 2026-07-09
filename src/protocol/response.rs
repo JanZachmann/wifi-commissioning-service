@@ -4,29 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::types::{ConnectionState, ConnectionStatus, SavedNetwork, ScanState, WifiNetwork};
 
-/// Response messages from server to client
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(untagged)]
-pub enum Response {
-    /// Scan started response
-    ScanStarted(ScanStartedResponse),
-
-    /// Scan results response
-    ScanResults(ScanResultsResponse),
-
-    /// Connect response
-    Connect(ConnectResponse),
-
-    /// Disconnect response
-    Disconnect(DisconnectResponse),
-
-    /// Status response
-    Status(StatusResponse),
-
-    /// Version response
-    Version(VersionResponse),
-}
-
 /// Response for scan request
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ScanStartedResponse {
@@ -81,6 +58,17 @@ pub struct ForgetNetworkResponse {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VersionResponse {
     pub status: String,
+    pub version: String,
+}
+
+/// Response for service-info request
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ServiceInfoResponse {
+    pub status: String,
+    /// Live BLE transport state: `true` once BLE is up, `false` if BLE is
+    /// disabled or failed to start.
+    pub ble_enabled: bool,
+    pub interface_name: String,
     pub version: String,
 }
 
@@ -156,6 +144,17 @@ impl VersionResponse {
     }
 }
 
+impl ServiceInfoResponse {
+    pub fn ok(ble_enabled: bool, interface_name: &str, version: &str) -> Self {
+        Self {
+            status: "ok".to_string(),
+            ble_enabled,
+            interface_name: interface_name.to_string(),
+            version: version.to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -163,11 +162,12 @@ mod tests {
     #[test]
     fn test_scan_started_response() {
         let response = ScanStartedResponse::ok(ScanState::Scanning);
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert!(json.contains(r#""status":"ok""#));
         assert!(json.contains(r#""state":"scanning""#));
 
-        let deserialized: ScanStartedResponse = serde_json::from_str(&json).unwrap();
+        let deserialized: ScanStartedResponse =
+            serde_json::from_str(&json).expect("deserialize ScanStartedResponse");
         assert_eq!(deserialized, response);
     }
 
@@ -181,12 +181,13 @@ mod tests {
         }];
 
         let response = ScanResultsResponse::ok(ScanState::Finished, networks.clone());
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert!(json.contains(r#""status":"ok""#));
         assert!(json.contains(r#""state":"finished""#));
         assert!(json.contains(r#""TestNet""#));
 
-        let deserialized: ScanResultsResponse = serde_json::from_str(&json).unwrap();
+        let deserialized: ScanResultsResponse =
+            serde_json::from_str(&json).expect("deserialize ScanResultsResponse");
         assert_eq!(deserialized.state, ScanState::Finished);
         assert_eq!(deserialized.networks.len(), 1);
         assert_eq!(deserialized.networks[0].ssid, "TestNet");
@@ -195,7 +196,7 @@ mod tests {
     #[test]
     fn test_connect_response() {
         let response = ConnectResponse::ok(ConnectionState::Connecting);
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert!(json.contains(r#""status":"ok""#));
         assert!(json.contains(r#""state":"connecting""#));
     }
@@ -203,18 +204,33 @@ mod tests {
     #[test]
     fn test_disconnect_response() {
         let response = DisconnectResponse::ok();
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert_eq!(json, r#"{"status":"ok"}"#);
     }
 
     #[test]
     fn test_version_response() {
         let response = VersionResponse::ok("1.0.0".to_string());
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert!(json.contains(r#""status":"ok""#));
         assert!(json.contains(r#""version":"1.0.0""#));
 
-        let deserialized: VersionResponse = serde_json::from_str(&json).unwrap();
+        let deserialized: VersionResponse =
+            serde_json::from_str(&json).expect("deserialize VersionResponse");
+        assert_eq!(deserialized, response);
+    }
+
+    #[test]
+    fn test_service_info_response() {
+        let response = ServiceInfoResponse::ok(true, "wlan0", "1.0.0");
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
+        assert!(json.contains(r#""status":"ok""#));
+        assert!(json.contains(r#""ble_enabled":true"#));
+        assert!(json.contains(r#""interface_name":"wlan0""#));
+        assert!(json.contains(r#""version":"1.0.0""#));
+
+        let deserialized: ServiceInfoResponse =
+            serde_json::from_str(&json).expect("deserialize ServiceInfoResponse");
         assert_eq!(deserialized, response);
     }
 
@@ -227,7 +243,7 @@ mod tests {
         };
 
         let response = StatusResponse::ok(connection, "wlan0");
-        let json = serde_json::to_string(&response).unwrap();
+        let json = serde_json::to_string(&response).expect("serialize response to JSON");
         assert!(json.contains(r#""status":"ok""#));
         assert!(json.contains(r#""state":"connected""#));
         assert!(json.contains(r#""MyNetwork""#));

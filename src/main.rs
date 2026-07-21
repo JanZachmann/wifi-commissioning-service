@@ -15,6 +15,10 @@ use wifi_commissioning_service::{
 };
 
 #[cfg(feature = "ble")]
+use std::time::Duration;
+#[cfg(feature = "ble")]
+use tracing::warn;
+#[cfg(feature = "ble")]
 use wifi_commissioning_service::transport::ble::BleAdapter;
 
 #[tokio::main]
@@ -254,6 +258,61 @@ mod tests {
             "BLE secret not provided"
         );
     }
+
+    #[cfg(feature = "ble")]
+    #[tokio::test(start_paused = true)]
+    async fn retry_returns_ok_without_sleeping() {
+        let calls = std::cell::Cell::new(0u32);
+        let start = tokio::time::Instant::now();
+
+        let result: Result<u32, &str> = retry(5, std::time::Duration::from_secs(2), || {
+            calls.set(calls.get() + 1);
+            std::future::ready(Ok(42))
+        })
+        .await;
+
+        assert_eq!(result, Ok(42));
+        assert_eq!(calls.get(), 1);
+        assert_eq!(start.elapsed(), std::time::Duration::ZERO);
+    }
+
+    #[cfg(feature = "ble")]
+    #[tokio::test(start_paused = true)]
+    async fn retry_exhausts_all_attempts_then_errors() {
+        const MAX: u32 = 5;
+        const DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+        let calls = std::cell::Cell::new(0u32);
+        let start = tokio::time::Instant::now();
+
+        let result: Result<(), &str> = retry(MAX, DELAY, || {
+            calls.set(calls.get() + 1);
+            std::future::ready(Err("boom"))
+        })
+        .await;
+
+        assert_eq!(result, Err("boom"));
+        assert_eq!(calls.get(), MAX);
+        assert_eq!(start.elapsed(), DELAY * (MAX - 1));
+    }
+
+    #[cfg(feature = "ble")]
+    #[tokio::test(start_paused = true)]
+    async fn retry_stops_after_first_success() {
+        const DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+        let calls = std::cell::Cell::new(0u32);
+        let start = tokio::time::Instant::now();
+
+        let result: Result<u32, &str> = retry(5, DELAY, || {
+            let n = calls.get() + 1;
+            calls.set(n);
+            std::future::ready(if n < 3 { Err("boom") } else { Ok(n) })
+        })
+        .await;
+
+        assert_eq!(result, Ok(3));
+        assert_eq!(calls.get(), 3);
+        assert_eq!(start.elapsed(), DELAY * 2);
+    }
 }
 
 /// Invalid transport/feature combination detected before startup.
@@ -332,18 +391,69 @@ fn start_unix_socket_transport(
     Ok(handle)
 }
 
+/// Max attempts to bring up the BLE adapter at startup.
+///
+/// At cold boot bluetoothd auto-powers the default adapter. Our set_powered
+/// call can race that power-on and get org.bluez.Error.Busy. Retrying lets the
+/// adapter settle before we fall back to Unix-socket-only.
 #[cfg(feature = "ble")]
-async fn start_ble_transport(
+const BLE_START_MAX_ATTEMPTS: u32 = 5;
+#[cfg(feature = "ble")]
+const BLE_START_RETRY_DELAY: Duration = Duration::from_secs(2);
+
+/// Retry an async operation up to `max_attempts` times, sleeping `delay`
+/// between attempts. Returns the last error once attempts are exhausted.
+#[cfg(feature = "ble")]
+async fn retry<T, E, F, Fut>(max_attempts: u32, delay: Duration, mut op: F) -> Result<T, E>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, E>>,
+    E: std::fmt::Display,
+{
+    let mut attempt = 1;
+    loop {
+        match op().await {
+            Ok(value) => return Ok(value),
+            Err(e) if attempt < max_attempts => {
+                warn!(
+                    attempt,
+                    max_attempts,
+                    "operation failed, retrying in {}s: {e}",
+                    delay.as_secs(),
+                );
+                tokio::time::sleep(delay).await;
+                attempt += 1;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
+#[cfg(feature = "ble")]
+async fn bring_up_ble_adapter(
     service: Arc<WifiCommissioningService<WifiCtrlBackend>>,
     ble_name: String,
-) -> Result<tokio::task::JoinHandle<Result<(), bluer::Error>>, Box<dyn std::error::Error>> {
+) -> Result<BleAdapter<WifiCtrlBackend>, bluer::Error> {
     use wifi_commissioning_service::transport::ble::GattServer;
 
     let mut adapter = BleAdapter::new(ble_name).await?;
     let session = adapter.session();
 
     let gatt_server = Arc::new(GattServer::new(service, session));
-    adapter.start(gatt_server.clone()).await?;
+    adapter.start(gatt_server).await?;
+
+    Ok(adapter)
+}
+
+#[cfg(feature = "ble")]
+async fn start_ble_transport(
+    service: Arc<WifiCommissioningService<WifiCtrlBackend>>,
+    ble_name: String,
+) -> Result<tokio::task::JoinHandle<Result<(), bluer::Error>>, Box<dyn std::error::Error>> {
+    let adapter = retry(BLE_START_MAX_ATTEMPTS, BLE_START_RETRY_DELAY, || {
+        bring_up_ble_adapter(service.clone(), ble_name.clone())
+    })
+    .await?;
 
     let span = info_span!("ble_transport");
     let handle = tokio::spawn(async move { adapter.run_event_loop().await }.instrument(span));

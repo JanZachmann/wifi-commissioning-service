@@ -6,7 +6,7 @@ homepage = "https://www.omnect.io/home"
 license = "MIT OR Apache-2.0"
 name = "wifi-commissioning-service"
 repository = "https://github.com/omnect/wifi-commissioning-service"
-version = "0.2.0"
+version = "0.2.1"
 
 [[bin]]
 name = "wifi-commissioning-service"
@@ -39,6 +39,7 @@ wifi-ctrl = { version = "0.2", default-features = false }
 [dev-dependencies]
 pretty_assertions = { version = "1.4", default-features = false, features = ["std"] }
 tempfile = { version = "3.27", default-features = false }
+tokio = { version = "1.52", default-features = false, features = ["test-util"] }
 tokio-test = { version = "0.4", default-features = false }
 
 [features]

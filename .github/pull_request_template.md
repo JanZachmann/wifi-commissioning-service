@@ -1,0 +1,1 @@
+- [ ] Breaks the [Unix socket REST API](https://github.com/omnect/wifi-commissioning-service#breaking-changes): `!` in the PR title, minor version bump, old and new format described

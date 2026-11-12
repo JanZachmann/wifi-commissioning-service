@@ -227,6 +227,23 @@ Errors return the appropriate HTTP status code with a JSON body:
 | 409 | `invalid_state` | No scan has been started (idle/error state) |
 | 502 | `backend_error` | WiFi backend failure |
 
+### Breaking changes
+
+Edge modules use this API. A change is breaking if a client built for the old version can fail with the new one, for example:
+
+- a route or method is changed or removed
+- a request body gets a new required field
+- a field or error code is renamed or removed
+- the type or shape of a field changes
+
+A new optional field is not breaking.
+
+A PR with a breaking change:
+
+- has `!` in its title, e.g. `feat!: ...`; the OS release notes list these commits
+- bumps at least the minor version while the version is 0.x
+- describes the old and the new format in the PR description
+
 ### Quick Test with curl
 
 ```bash

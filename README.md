@@ -235,13 +235,16 @@ Edge modules use this API. A change is breaking if a client built for the old ve
 - a request body gets a new required field
 - a field or error code is renamed or removed
 - the type or shape of a field changes
+- a new enum or state value in a response: clients that parse it into a closed enum reject it
+- an HTTP status code changes, or a route changes between sync and async (e.g. `202` for scan and connect)
+- the socket path, mode or group changes ([socket file](systemd/wifi-commissioning-service@.socket))
 
-A new optional field is not breaking.
+A new optional field is not breaking for old clients. Edge modules and the OS are updated separately, so a new client can also run against an older version: requests with a field it does not know are accepted and the field is ignored. A client that needs a new field or route checks `GET /api/v1/version` first.
 
 A PR with a breaking change:
 
 - has `!` in its title, e.g. `feat!: ...`; the OS release notes list these commits
-- bumps at least the minor version while the version is 0.x
+- bumps the minor version while the version is 0.x, and the major version from 1.0 on
 - describes the old and the new format in the PR description
 
 ### Quick Test with curl

@@ -240,7 +240,7 @@ Edge modules use this API. A change is breaking if a client built for the old ve
 - input validation gets stricter: a request that was accepted before is rejected
 - the socket path, mode or group changes ([socket file](systemd/wifi-commissioning-service@.socket))
 
-A new optional field is not breaking for old clients. Edge modules and the OS are updated separately, so a new client can also run against an older version: requests with a field it does not know are accepted and the field is ignored. A client that needs a new field or route checks `GET /api/v1/version` first.
+A new optional field is not breaking for old clients. Edge modules and the OS are updated separately, so a new client can also run against an older version: requests with a field it does not know are accepted and the field is ignored. A client that needs a new field or route checks `GET /api/v1/version` first. So every API addition bumps the version: the patch version on 0.x, the minor version from 1.0.
 
 A PR with a breaking change:
 

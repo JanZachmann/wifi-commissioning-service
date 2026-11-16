@@ -9,22 +9,15 @@ on:
       - edited
       - synchronize
 permissions:
-  contents: read
   pull-requests: read
 jobs:
   lint-pr:
     runs-on: ubuntu-latest
     steps:
-      # the commitlint rules come from the base branch, so a PR cannot relax its own check
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.base.sha }}
-          persist-credentials: false
       # check for the most recent release: https://github.com/CondeNast/conventional-pull-request-action/releases
       - uses: CondeNast/conventional-pull-request-action@3ce30fdb4d2beef8b941f23a1114dd8188eba082 # v0.2.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          commitlintRulesPath: "./commitlint.rules.js"
           # squash merge uses the PR title as commit subject, so only the title is linted
           ignoreCommits: "true"

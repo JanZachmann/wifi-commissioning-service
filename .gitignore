@@ -13,9 +13,6 @@
 # Build recipes (external)
 *.bb
 
-# Claude Code context
-CLAUDE.md
-setup-ai.sh
-.github/copilot-instructions.md
-GEMINI.md
-.user-context.md
+# Claude Code
+/.claude/settings.local.json
+/.claude/worktrees/

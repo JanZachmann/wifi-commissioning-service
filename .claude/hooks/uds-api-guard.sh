@@ -7,7 +7,7 @@ set -u
 
 NOT_BREAKING_MARKER="UDS_API_BREAKING=no"
 # Files that define the UDS API (README.md, "Breaking changes").
-API_PATHS=(":(top)src" ":(top)systemd/*.socket")
+API_PATHS=(":(top)src" ":(top)systemd/*.socket" ":(top)systemd/*.service")
 GH_TIMEOUT_S=15
 
 repo_name() {
@@ -111,6 +111,6 @@ fi
 
 [[ " $env_prefix" =~ [[:space:]]"$NOT_BREAKING_MARKER"[[:space:]] ]] && exit 0
 
-decide deny "$repo: edge modules use its UDS API, and this PR changes its files (src/ or the socket unit). Read README.md, section \"Breaking changes\", and check the diff against $base_ref for each case listed there.
+decide deny "$repo: edge modules use its UDS API, and this PR changes its files (src/, the socket unit or the service unit). Read README.md, section \"Breaking changes\", and check the diff against $base_ref for each case listed there.
 - Breaking: put \"!\" in the PR title (e.g. \"feat!: ...\"), bump at least the minor version while on 0.x, and describe the old and new format in the PR description. The release notes pick it up from the title.
 - Not breaking: run the command again with the prefix $NOT_BREAKING_MARKER directly before \"gh\" and tell the user why it is not breaking."

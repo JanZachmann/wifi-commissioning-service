@@ -42,9 +42,9 @@ breaking:
 - describe the old and new format in the PR description.
 
 The hook `.claude/hooks/uds-api-guard.sh` blocks the PR command until this
-is decided. It checks changes in `src/` and the socket unit. If the change is
-not breaking, put `UDS_API_BREAKING=no` directly before `gh` and tell the
-user why.
+is decided. It checks changes in `src/` and in the socket and service units.
+If the change is not breaking, put `UDS_API_BREAKING=no` directly before `gh`
+and tell the user why.
 
-Check again after each push to an open PR that changes `src/` or the socket
-unit, and fix the title if needed. The hook does not run on `git push`.
+Check again after each push to an open PR that changes these files, and fix
+the title if needed. The hook does not run on `git push`.

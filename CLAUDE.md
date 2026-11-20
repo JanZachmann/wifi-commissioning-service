@@ -13,8 +13,9 @@ management over BLE GATT (for mobile apps) and a REST API on a Unix socket
   (`src/backend/wifi_backend.rs`). Transport and core code never call
   `wifi-ctrl` or system interfaces directly. A new trait method also needs
   an implementation in `src/backend/mock_backend.rs`.
-- Credentials go to the volatile wpa_supplicant config first. `SAVE_CONFIG`
-  runs only after the `CTRL-EVENT-CONNECTED` event, never before.
+- On connect, credentials go to the volatile wpa_supplicant config first.
+  `SAVE_CONFIG` runs only after the `CTRL-EVENT-CONNECTED` event, never
+  before.
 - BLE scan results and saved-network lists are read in 100-byte chunks
   (`SCAN_RESULT_CHUNK_SIZE` in `src/transport/ble/uuids.rs`). A change to
   their serialization must keep that limit.
@@ -40,5 +41,6 @@ breaking:
 - describe the old and new format in the PR description.
 
 The hook `.claude/hooks/uds-api-guard.sh` blocks the PR command until this
-is decided. If the change is not breaking, prefix the command with
-`UDS_API_BREAKING=no` and tell the user why.
+is decided. It checks changes in `src/` and the socket unit. If the change is
+not breaking, put `UDS_API_BREAKING=no` directly before `gh` and tell the
+user why.

@@ -13,9 +13,10 @@ management over BLE GATT (for mobile apps) and a REST API on a Unix socket
   (`src/backend/wifi_backend.rs`). Transport and core code never call
   `wifi-ctrl` or system interfaces directly. A new trait method also needs
   an implementation in `src/backend/mock_backend.rs`.
-- On connect, credentials go to the volatile wpa_supplicant config first.
-  `SAVE_CONFIG` runs only after the `CTRL-EVENT-CONNECTED` event, never
-  before.
+- On connect, a saved entry for the same SSID is removed first, and this
+  removal is saved to disk at once (`remove_network` runs `SAVE_CONFIG`).
+  The new credentials go to the volatile wpa_supplicant config and are saved
+  only after the `CTRL-EVENT-CONNECTED` event.
 - BLE scan results and saved-network lists are read in 100-byte chunks
   (`SCAN_RESULT_CHUNK_SIZE` in `src/transport/ble/uuids.rs`). A change to
   their serialization must keep that limit.

@@ -14,5 +14,6 @@
 *.bb
 
 # Claude Code
+/CLAUDE.local.md
 /.claude/settings.local.json
 /.claude/worktrees/

@@ -31,25 +31,25 @@ Manual API test: `examples/unix-socket-client/wifi-client.sh <command>`
 
 ## Breaking UDS API changes
 
-Edge modules use the Unix socket API of this service. Before `gh pr create`,
-a PR title change or a merge with its own subject, check the PR diff for a
-breaking API change as defined in
-[README.md, "Breaking changes"](README.md#breaking-changes). If it is
+Edge modules use the Unix socket API of this service. Before `gh pr create`
+or a PR title change, check the PR diff for a breaking API change as defined
+in [README.md, "Breaking changes"](README.md#breaking-changes). If it is
 breaking:
 
-- put `!` in the PR title or merge subject (e.g. `feat!: ...`); the release
-  notes take it from there,
+- put `!` in the PR title (e.g. `feat!: ...`); the release notes take it
+  from there,
 - bump at least the minor version while on 0.x,
 - describe the old and new format in the PR description.
 
-The hook `.claude/hooks/uds-api-guard.sh` blocks the PR command until this
-is decided. It checks changes in `src/` and in the socket and service units.
-If the change is not breaking, put `UDS_API_BREAKING=no` directly before `gh`
-and tell the user why.
+If it is not breaking, put a line `UDS_API_BREAKING=no` in the PR
+description and tell the user why. The CI job `uds-api-breaking` fails for a
+PR that changes `src/` or the socket or service unit and has neither. It runs
+again when the PR is pushed or its title or description changes.
 
-The paths it checks are set in `.claude/settings.json`. The files in
-`.claude/hooks/` are the same in `omnect-device-service`: change both
-repos the same way, and run `.claude/hooks/test-uds-api-guard.sh`.
+Check again after each push to an open PR, and fix the title or the marker
+if needed. Merge with the PR title: no `--subject` on `gh pr merge`, because
+the squash commit subject replaces the title that CI checked.
 
-Check again after each push to an open PR that changes these files, and fix
-the title if needed. The hook does not run on `git push`.
+The hook `.claude/hooks/uds-api-reminder.sh` adds this rule to the context
+before a PR command or a `git push`. The CI job and the hook are the same in
+`omnect-device-service`, apart from the paths: change both repos.
